@@ -1,0 +1,98 @@
+[project]
+name = "urbanium"
+version = "0.1.0"
+description = "A deterministic, agent-based city simulation framework"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+authors = [
+    {name = "Urbanium Contributors"}
+]
+keywords = [
+    "simulation",
+    "agent-based",
+    "city",
+    "urban",
+    "emergence",
+    "systems",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+
+dependencies = [
+    "pydantic>=2.0.0",  # For structured output schemas
+]
+
+[project.optional-dependencies]
+ai = [
+    "openai>=1.0.0",    # OpenAI-compatible API client
+]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+analysis = [
+    "pandas>=2.0.0",
+    "polars>=0.19.0",
+    "matplotlib>=3.7.0",
+]
+graph = [
+    "networkx>=3.0",
+]
+all = [
+    "urbanium[ai,analysis,graph]",
+]
+
+[project.scripts]
+urbanium = "urbanium.main:main"
+
+[project.urls]
+Homepage = "https://github.com/kasuken/Urbanium"
+Repository = "https://github.com/kasuken/Urbanium"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["urbanium*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --tb=short"
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
