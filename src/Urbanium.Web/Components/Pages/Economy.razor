@@ -1,0 +1,224 @@
+@page "/economy"
+@inject WorldEngine WorldEngine
+
+<PageTitle>Economy</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Economy Overview</MudText>
+<MudText Typo="Typo.subtitle1" Class="mb-4" Color="Color.Secondary">
+    Economic systems including labor, housing, and goods markets.
+</MudText>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+    <MudTabPanel Text="Labor Market" Icon="@Icons.Material.Filled.Work">
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6">Open Positions</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Primary">@WorldEngine.State.LaborMarket.OpenPositions.Count</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6">Employed Citizens</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Success">@WorldEngine.State.Citizens.Count(c => c.EmployerId.HasValue)</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6">Average Wage</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Secondary">
+                        @(WorldEngine.State.Citizens.Where(c => c.Resources.MonthlyIncome > 0)
+                            .Select(c => c.Resources.MonthlyIncome)
+                            .DefaultIfEmpty(0)
+                            .Average().ToString("C0"))
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+        
+        <MudText Typo="Typo.h6" Class="mt-4 mb-2">Job Listings</MudText>
+        @if (WorldEngine.State.LaborMarket.OpenPositions.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">No open positions available.</MudAlert>
+        }
+        else
+        {
+            <MudDataGrid Items="@WorldEngine.State.LaborMarket.OpenPositions" Dense="true" Hover="true">
+                <Columns>
+                    <PropertyColumn Property="x => x.Title" Title="Position" />
+                    <PropertyColumn Property="x => x.Wage" Title="Wage" Format="C0" />
+                    <TemplateColumn Title="Employer">
+                        <CellTemplate>
+                            @(WorldEngine.State.Employers.FirstOrDefault(e => e.Id == context.Item.EmployerId)?.Name ?? "Unknown")
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Location">
+                        <CellTemplate>
+                            @(WorldEngine.State.Geography.Districts.FirstOrDefault(d => d.Id == context.Item.LocationDistrictId)?.Name ?? "Unknown")
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="Required Skills">
+                        <CellTemplate>
+                            @if (context.Item.RequiredSkills.Any())
+                            {
+                                foreach (var skill in context.Item.RequiredSkills)
+                                {
+                                    <MudChip T="string" Size="Size.Small">@skill</MudChip>
+                                }
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption">None</MudText>
+                            }
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+            </MudDataGrid>
+        }
+    </MudTabPanel>
+    
+    <MudTabPanel Text="Housing Market" Icon="@Icons.Material.Filled.Apartment">
+        <MudGrid>
+            <MudItem xs="12" md="3">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6">Total Units</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Primary">@WorldEngine.State.HousingMarket.AvailableUnits.Count</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6">Available</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Success">@WorldEngine.State.HousingMarket.AvailableUnits.Count(u => !u.IsOccupied)</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6">Occupied</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Warning">@WorldEngine.State.HousingMarket.AvailableUnits.Count(u => u.IsOccupied)</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="3">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6">Avg. Rent</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Secondary">
+                        @(WorldEngine.State.HousingMarket.AvailableUnits
+                            .Select(u => u.Rent)
+                            .DefaultIfEmpty(0)
+                            .Average().ToString("C0"))
+                    </MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+        
+        <MudText Typo="Typo.h6" Class="mt-4 mb-2">Available Housing Units</MudText>
+        @if (WorldEngine.State.HousingMarket.AvailableUnits.Count(u => !u.IsOccupied) == 0)
+        {
+            <MudAlert Severity="Severity.Warning">No housing units available. High housing pressure!</MudAlert>
+        }
+        else
+        {
+            <MudDataGrid Items="@WorldEngine.State.HousingMarket.AvailableUnits.Where(u => !u.IsOccupied).Take(20)" Dense="true" Hover="true">
+                <Columns>
+                    <TemplateColumn Title="District">
+                        <CellTemplate>
+                            @(WorldEngine.State.Geography.Districts.FirstOrDefault(d => d.Id == context.Item.DistrictId)?.Name ?? "Unknown")
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.Capacity" Title="Capacity" />
+                    <PropertyColumn Property="x => x.Rent" Title="Monthly Rent" Format="C0" />
+                </Columns>
+            </MudDataGrid>
+        }
+    </MudTabPanel>
+    
+    <MudTabPanel Text="Employers" Icon="@Icons.Material.Filled.Business">
+        <MudGrid>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6">Total Employers</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Primary">@WorldEngine.State.Employers.Count</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6">Total Employees</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Success">@WorldEngine.State.Employers.Sum(e => e.EmployeeCount)</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6">Total Capacity</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Secondary">@WorldEngine.State.Employers.Sum(e => e.MaxEmployees)</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+        
+        <MudText Typo="Typo.h6" Class="mt-4 mb-2">Employer Directory</MudText>
+        @if (WorldEngine.State.Employers.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">No employers in the city.</MudAlert>
+        }
+        else
+        {
+            <MudDataGrid Items="@WorldEngine.State.Employers" Dense="true" Hover="true">
+                <Columns>
+                    <PropertyColumn Property="x => x.Name" Title="Name" />
+                    <TemplateColumn Title="Type">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small" Color="@GetEmployerTypeColor(context.Item.Type)">
+                                @context.Item.Type
+                            </MudChip>
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <TemplateColumn Title="District">
+                        <CellTemplate>
+                            @(WorldEngine.State.Geography.Districts.FirstOrDefault(d => d.Id == context.Item.DistrictId)?.Name ?? "Unknown")
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.EmployeeCount" Title="Employees" />
+                    <PropertyColumn Property="x => x.MaxEmployees" Title="Capacity" />
+                    <TemplateColumn Title="Utilization">
+                        <CellTemplate>
+                            <MudProgressLinear Color="Color.Primary" 
+                                Value="@(context.Item.MaxEmployees > 0 ? (double)context.Item.EmployeeCount / context.Item.MaxEmployees * 100 : 0)" 
+                                Style="width: 80px;" />
+                        </CellTemplate>
+                    </TemplateColumn>
+                    <PropertyColumn Property="x => x.WageBudget" Title="Wage Budget" Format="C0" />
+                </Columns>
+            </MudDataGrid>
+        }
+    </MudTabPanel>
+    
+    <MudTabPanel Text="Goods Market" Icon="@Icons.Material.Filled.ShoppingCart">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6">Food Price Index</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Primary">@WorldEngine.State.GoodsMarket.FoodPriceIndex.ToString("F2")</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">1.0 = baseline</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudText Typo="Typo.h6">Supply Level</MudText>
+                    <MudText Typo="Typo.h3" Color="Color.Success">@(WorldEngine.State.GoodsMarket.SupplyLevel.ToString("P0"))</MudText>
+                    <MudProgressLinear Color="Color.Success" Value="@(WorldEngine.State.GoodsMarket.SupplyLevel * 100)" Class="mt-2" />
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private Color GetEmployerTypeColor(Engine.EmployerType type)
+    {
+        return type switch
+        {
+            Engine.EmployerType.Private => Color.Primary,
+            Engine.EmployerType.Public => Color.Success,
+            Engine.EmployerType.NonProfit => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+}

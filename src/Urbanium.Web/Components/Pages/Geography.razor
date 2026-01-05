@@ -1,0 +1,151 @@
+@page "/geography"
+@inject WorldEngine WorldEngine
+
+<PageTitle>Geography</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">City Geography</MudText>
+<MudText Typo="Typo.subtitle1" Class="mb-4" Color="Color.Secondary">
+    Spatial graph representing districts and connections between them.
+</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6">Total Districts</MudText>
+            <MudText Typo="Typo.h3" Color="Color.Primary">@WorldEngine.State.Geography.Districts.Count</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6">Connections</MudText>
+            <MudText Typo="Typo.h3" Color="Color.Secondary">@WorldEngine.State.Geography.Connections.Count</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6">Avg. Travel Time</MudText>
+            <MudText Typo="Typo.h3" Color="Color.Tertiary">
+                @(WorldEngine.State.Geography.Connections.Count > 0 
+                    ? WorldEngine.State.Geography.Connections.Average(c => c.TravelTime).ToString("F1") 
+                    : "0") min
+            </MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudPaper Class="pa-4 mt-4" Elevation="2">
+    <MudText Typo="Typo.h6" Class="mb-4">Districts</MudText>
+    
+    @if (WorldEngine.State.Geography.Districts.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">
+            No districts defined. Load a scenario to populate the city geography.
+        </MudAlert>
+    }
+    else
+    {
+        <MudDataGrid Items="@WorldEngine.State.Geography.Districts" Dense="true" Hover="true" Striped="true">
+            <Columns>
+                <PropertyColumn Property="x => x.Name" Title="Name" />
+                <TemplateColumn Title="Type">
+                    <CellTemplate>
+                        <MudChip T="string" Size="Size.Small" Color="@GetDistrictTypeColor(context.Item.Type)">
+                            @context.Item.Type
+                        </MudChip>
+                    </CellTemplate>
+                </TemplateColumn>
+                <PropertyColumn Property="x => x.Capacity" Title="Capacity" />
+                <PropertyColumn Property="x => x.RentIndex" Title="Rent Index" Format="F2" />
+                <TemplateColumn Title="Location">
+                    <CellTemplate>
+                        (@context.Item.X.ToString("F1"), @context.Item.Y.ToString("F1"))
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Population">
+                    <CellTemplate>
+                        @WorldEngine.State.Citizens.Count(c => c.CurrentDistrictId == context.Item.Id)
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Employers">
+                    <CellTemplate>
+                        @WorldEngine.State.Employers.Count(e => e.DistrictId == context.Item.Id)
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    }
+</MudPaper>
+
+<MudPaper Class="pa-4 mt-4" Elevation="2">
+    <MudText Typo="Typo.h6" Class="mb-4">Connections</MudText>
+    
+    @if (WorldEngine.State.Geography.Connections.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">
+            No connections defined between districts.
+        </MudAlert>
+    }
+    else
+    {
+        <MudDataGrid Items="@GetConnectionsWithNames()" Dense="true" Hover="true">
+            <Columns>
+                <PropertyColumn Property="x => x.FromName" Title="From" />
+                <PropertyColumn Property="x => x.ToName" Title="To" />
+                <PropertyColumn Property="x => x.TravelTime" Title="Travel Time" Format="F1 min" />
+                <TemplateColumn Title="Transport">
+                    <CellTemplate>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Icon="@GetTransportIcon(context.Item.TransportType)">
+                            @context.Item.TransportType
+                        </MudChip>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    }
+</MudPaper>
+
+@code {
+    private Color GetDistrictTypeColor(Engine.DistrictType type)
+    {
+        return type switch
+        {
+            Engine.DistrictType.Residential => Color.Success,
+            Engine.DistrictType.Commercial => Color.Primary,
+            Engine.DistrictType.Industrial => Color.Warning,
+            Engine.DistrictType.Mixed => Color.Secondary,
+            Engine.DistrictType.Central => Color.Tertiary,
+            _ => Color.Default
+        };
+    }
+    
+    private string GetTransportIcon(Engine.TransportType type)
+    {
+        return type switch
+        {
+            Engine.TransportType.Walking => Icons.Material.Filled.DirectionsWalk,
+            Engine.TransportType.PublicTransit => Icons.Material.Filled.DirectionsBus,
+            Engine.TransportType.Vehicle => Icons.Material.Filled.DirectionsCar,
+            _ => Icons.Material.Filled.Route
+        };
+    }
+    
+    private List<ConnectionDisplay> GetConnectionsWithNames()
+    {
+        var districts = WorldEngine.State.Geography.Districts.ToDictionary(d => d.Id, d => d.Name);
+        return WorldEngine.State.Geography.Connections.Select(c => new ConnectionDisplay
+        {
+            FromName = districts.GetValueOrDefault(c.FromDistrictId, "Unknown"),
+            ToName = districts.GetValueOrDefault(c.ToDistrictId, "Unknown"),
+            TravelTime = c.TravelTime,
+            TransportType = c.TransportType
+        }).ToList();
+    }
+    
+    private class ConnectionDisplay
+    {
+        public string FromName { get; set; } = "";
+        public string ToName { get; set; } = "";
+        public double TravelTime { get; set; }
+        public Engine.TransportType TransportType { get; set; }
+    }
+}

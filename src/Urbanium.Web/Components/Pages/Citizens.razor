@@ -1,0 +1,92 @@
+@page "/citizens"
+@inject WorldEngine WorldEngine
+
+<PageTitle>Citizens</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Citizens</MudText>
+<MudText Typo="Typo.subtitle1" Class="mb-4" Color="Color.Secondary">
+    Citizens are structured agents with stable traits, evolving needs, and bounded decision models.
+</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6">Total Population</MudText>
+            <MudText Typo="Typo.h3" Color="Color.Primary">@WorldEngine.State.Citizens.Count</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6">Employed</MudText>
+            <MudText Typo="Typo.h3" Color="Color.Success">@WorldEngine.State.Citizens.Count(c => c.EmployerId.HasValue)</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6">Unemployed</MudText>
+            <MudText Typo="Typo.h3" Color="Color.Warning">@WorldEngine.State.Citizens.Count(c => !c.EmployerId.HasValue)</MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudPaper Class="pa-4 mt-4" Elevation="2">
+    <MudText Typo="Typo.h6" Class="mb-4">Citizen List</MudText>
+    
+    @if (WorldEngine.State.Citizens.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">
+            No citizens in the simulation. Initialize a scenario to populate the city.
+        </MudAlert>
+    }
+    else
+    {
+        <MudDataGrid Items="@WorldEngine.State.Citizens" Dense="true" Hover="true" Striped="true">
+            <Columns>
+                <PropertyColumn Property="x => x.Name" Title="Name" />
+                <PropertyColumn Property="x => x.Age" Title="Age" />
+                <TemplateColumn Title="State">
+                    <CellTemplate>
+                        <MudChip T="string" Size="Size.Small" Color="@GetStateColor(context.Item.State)">
+                            @context.Item.State
+                        </MudChip>
+                    </CellTemplate>
+                </TemplateColumn>
+                <PropertyColumn Property="x => x.Resources.Cash" Title="Cash" Format="C2" />
+                <PropertyColumn Property="x => x.Resources.MonthlyIncome" Title="Monthly Income" Format="C2" />
+                <TemplateColumn Title="Needs">
+                    <CellTemplate>
+                        <MudStack Row="true" Spacing="1">
+                            <MudTooltip Text="Hunger">
+                                <MudProgressLinear Color="Color.Warning" Value="@(context.Item.Needs.Hunger * 100)" Style="width: 40px;" />
+                            </MudTooltip>
+                            <MudTooltip Text="Energy">
+                                <MudProgressLinear Color="Color.Info" Value="@(context.Item.Needs.Energy * 100)" Style="width: 40px;" />
+                            </MudTooltip>
+                            <MudTooltip Text="Social">
+                                <MudProgressLinear Color="Color.Primary" Value="@(context.Item.Needs.Social * 100)" Style="width: 40px;" />
+                            </MudTooltip>
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+                <PropertyColumn Property="x => x.Skills.Count" Title="Skills" />
+                <PropertyColumn Property="x => x.SocialTies.Count" Title="Social Ties" />
+            </Columns>
+        </MudDataGrid>
+    }
+</MudPaper>
+
+@code {
+    private Color GetStateColor(Agents.CitizenState state)
+    {
+        return state switch
+        {
+            Agents.CitizenState.Working => Color.Success,
+            Agents.CitizenState.Employed => Color.Success,
+            Agents.CitizenState.Unemployed => Color.Warning,
+            Agents.CitizenState.Resting => Color.Info,
+            Agents.CitizenState.Socializing => Color.Primary,
+            Agents.CitizenState.Commuting => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+}

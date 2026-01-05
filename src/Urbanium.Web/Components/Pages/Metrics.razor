@@ -1,0 +1,139 @@
+@page "/metrics"
+@inject WorldEngine WorldEngine
+@inject MetricsService MetricsService
+
+<PageTitle>Metrics</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Metrics Dashboard</MudText>
+<MudText Typo="Typo.subtitle1" Class="mb-4" Color="Color.Secondary">
+    Urbanium tracks measurable outcomes. Results are analyzed across multiple runs and random seeds.
+</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="3">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Employment Rate</MudText>
+            <MudText Typo="Typo.h4">@(WorldEngine.State.Metrics.EmploymentRate.ToString("P1"))</MudText>
+            <MudProgressLinear Color="Color.Success" Value="@(WorldEngine.State.Metrics.EmploymentRate * 100)" Class="mt-2" />
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" md="3">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Average Wage</MudText>
+            <MudText Typo="Typo.h4">@WorldEngine.State.Metrics.AverageWage.ToString("C0")</MudText>
+            <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Success" />
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" md="3">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Rent Index</MudText>
+            <MudText Typo="Typo.h4">@WorldEngine.State.Metrics.RentIndex.ToString("C0")</MudText>
+            <MudIcon Icon="@Icons.Material.Filled.Apartment" Color="Color.Primary" />
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" md="3">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Gini Coefficient</MudText>
+            <MudText Typo="Typo.h4">@WorldEngine.State.Metrics.GiniCoefficient.ToString("F3")</MudText>
+            <MudProgressLinear Color="@GetGiniColor()" Value="@(WorldEngine.State.Metrics.GiniCoefficient * 100)" Class="mt-2" />
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudGrid Class="mt-4">
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">Housing Metrics</MudText>
+            <MudSimpleTable Dense="true">
+                <tbody>
+                    <tr>
+                        <td>Housing Pressure</td>
+                        <td>
+                            <MudProgressLinear Color="Color.Warning" Value="@(WorldEngine.State.Metrics.HousingPressure * 100)" />
+                        </td>
+                        <td>@(WorldEngine.State.Metrics.HousingPressure.ToString("P0"))</td>
+                    </tr>
+                    <tr>
+                        <td>Average Commute Time</td>
+                        <td colspan="2">@WorldEngine.State.Metrics.AverageCommuteTime.ToString("F1") min</td>
+                    </tr>
+                    <tr>
+                        <td>Available Units</td>
+                        <td colspan="2">@WorldEngine.State.HousingMarket.AvailableUnits.Count(u => !u.IsOccupied)</td>
+                    </tr>
+                    <tr>
+                        <td>Total Units</td>
+                        <td colspan="2">@WorldEngine.State.HousingMarket.AvailableUnits.Count</td>
+                    </tr>
+                </tbody>
+            </MudSimpleTable>
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">Labor Market Metrics</MudText>
+            <MudSimpleTable Dense="true">
+                <tbody>
+                    <tr>
+                        <td>Open Positions</td>
+                        <td>@WorldEngine.State.LaborMarket.OpenPositions.Count</td>
+                    </tr>
+                    <tr>
+                        <td>Employers</td>
+                        <td>@WorldEngine.State.Employers.Count</td>
+                    </tr>
+                    <tr>
+                        <td>Agent Churn</td>
+                        <td>@WorldEngine.State.Metrics.AgentChurn</td>
+                    </tr>
+                    <tr>
+                        <td>Bankruptcies</td>
+                        <td>@WorldEngine.State.Metrics.Bankruptcies</td>
+                    </tr>
+                </tbody>
+            </MudSimpleTable>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudGrid Class="mt-4">
+    <MudItem xs="12">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">Metrics History</MudText>
+            
+            @if (WorldEngine.State.Metrics.History.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">
+                    No metrics recorded yet. Start the simulation to begin tracking.
+                </MudAlert>
+            }
+            else
+            {
+                <MudDataGrid Items="@WorldEngine.State.Metrics.History.TakeLast(50)" Dense="true" Hover="true">
+                    <Columns>
+                        <PropertyColumn Property="x => x.Tick" Title="Tick" />
+                        <PropertyColumn Property="x => x.Time" Title="Time" Format="yyyy-MM-dd HH:mm" />
+                        <PropertyColumn Property="x => x.EmploymentRate" Title="Employment" Format="P1" />
+                        <PropertyColumn Property="x => x.AverageWage" Title="Avg Wage" Format="C0" />
+                        <PropertyColumn Property="x => x.RentIndex" Title="Rent Index" Format="C0" />
+                        <PropertyColumn Property="x => x.GiniCoefficient" Title="Gini" Format="F3" />
+                    </Columns>
+                </MudDataGrid>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private Color GetGiniColor()
+    {
+        var gini = WorldEngine.State.Metrics.GiniCoefficient;
+        if (gini < 0.3) return Color.Success;
+        if (gini < 0.4) return Color.Warning;
+        return Color.Error;
+    }
+}

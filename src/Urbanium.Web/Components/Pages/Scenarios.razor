@@ -1,0 +1,290 @@
+@page "/scenarios"
+@inject WorldEngine WorldEngine
+@using Urbanium.Web.Scenarios
+
+<PageTitle>Scenarios</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Scenarios</MudText>
+<MudText Typo="Typo.subtitle1" Class="mb-4" Color="Color.Secondary">
+    Define initial conditions and run experiments with different configurations.
+</MudText>
+
+<MudGrid>
+    @foreach (var scenario in ScenarioFactory.GetAllScenarios())
+    {
+        <MudItem xs="12" md="4">
+            <MudCard Elevation="2">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">@scenario.Name</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudIconButton Icon="@Icons.Material.Filled.Info" Color="Color.Default" />
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText Typo="Typo.body2" Class="mb-4">@scenario.Description</MudText>
+                    <MudSimpleTable Dense="true">
+                        <tbody>
+                            <tr>
+                                <td>Seed</td>
+                                <td>@scenario.Seed</td>
+                            </tr>
+                            <tr>
+                                <td>Population</td>
+                                <td>@scenario.InitialPopulation</td>
+                            </tr>
+                            <tr>
+                                <td>Districts</td>
+                                <td>@scenario.DistrictCount</td>
+                            </tr>
+                            <tr>
+                                <td>Employers</td>
+                                <td>@scenario.EmployerCount</td>
+                            </tr>
+                            <tr>
+                                <td>Housing Units</td>
+                                <td>@scenario.HousingUnits</td>
+                            </tr>
+                        </tbody>
+                    </MudSimpleTable>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="() => LoadScenario(scenario)">
+                        Load Scenario
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    }
+</MudGrid>
+
+<MudPaper Class="pa-4 mt-4" Elevation="2">
+    <MudText Typo="Typo.h6" Class="mb-4">Custom Scenario</MudText>
+    <MudGrid>
+        <MudItem xs="12" md="3">
+            <MudNumericField @bind-Value="_customSeed" Label="Seed" Variant="Variant.Outlined" />
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudNumericField @bind-Value="_customPopulation" Label="Population" Variant="Variant.Outlined" Min="10" Max="1000" />
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudNumericField @bind-Value="_customDistricts" Label="Districts" Variant="Variant.Outlined" Min="1" Max="20" />
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudNumericField @bind-Value="_customEmployers" Label="Employers" Variant="Variant.Outlined" Min="1" Max="50" />
+        </MudItem>
+        <MudItem xs="12">
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="LoadCustomScenario">
+                Load Custom Scenario
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+@if (_loadedScenario != null)
+{
+    <MudAlert Severity="Severity.Success" Class="mt-4">
+        Scenario "@_loadedScenario.Name" loaded successfully with @WorldEngine.State.Citizens.Count citizens.
+    </MudAlert>
+}
+
+@code {
+    private int _customSeed = 42;
+    private int _customPopulation = 100;
+    private int _customDistricts = 5;
+    private int _customEmployers = 10;
+    private Scenario? _loadedScenario;
+    
+    private void LoadScenario(Scenario scenario)
+    {
+        InitializeWorld(scenario);
+        _loadedScenario = scenario;
+    }
+    
+    private void LoadCustomScenario()
+    {
+        var scenario = new Scenario
+        {
+            Id = "custom",
+            Name = "Custom Scenario",
+            Description = "User-defined scenario",
+            Seed = _customSeed,
+            InitialPopulation = _customPopulation,
+            DistrictCount = _customDistricts,
+            EmployerCount = _customEmployers,
+            HousingUnits = (int)(_customPopulation * 1.2)
+        };
+        
+        LoadScenario(scenario);
+    }
+    
+    private void InitializeWorld(Scenario scenario)
+    {
+        WorldEngine.Initialize(scenario.Seed);
+        var random = new Random(scenario.Seed);
+        
+        // Create districts
+        var districtNames = new[] { "Downtown", "Northside", "Eastport", "Westwood", "Southgate", 
+                                    "Riverside", "Hillcrest", "Lakewood", "Industrial", "Central" };
+        for (int i = 0; i < scenario.DistrictCount; i++)
+        {
+            WorldEngine.State.Geography.Districts.Add(new Engine.District
+            {
+                Name = districtNames[i % districtNames.Length],
+                Type = (Engine.DistrictType)(i % 5),
+                X = random.NextDouble() * 100,
+                Y = random.NextDouble() * 100,
+                Capacity = 50 + random.Next(100),
+                RentIndex = 0.8 + random.NextDouble() * 0.4
+            });
+        }
+        
+        // Create connections between districts
+        var districts = WorldEngine.State.Geography.Districts;
+        for (int i = 0; i < districts.Count; i++)
+        {
+            for (int j = i + 1; j < districts.Count; j++)
+            {
+                if (random.NextDouble() > 0.5) // 50% chance of connection
+                {
+                    var distance = Math.Sqrt(
+                        Math.Pow(districts[i].X - districts[j].X, 2) + 
+                        Math.Pow(districts[i].Y - districts[j].Y, 2));
+                    
+                    WorldEngine.State.Geography.Connections.Add(new Engine.Connection
+                    {
+                        FromDistrictId = districts[i].Id,
+                        ToDistrictId = districts[j].Id,
+                        TravelTime = distance / 2,
+                        TransportType = Engine.TransportType.PublicTransit
+                    });
+                }
+            }
+        }
+        
+        // Create employers
+        var employerNames = new[] { "TechCorp", "CityBank", "MediCare", "EduFirst", "LogiTrans",
+                                    "FoodMart", "BuildCo", "GreenEnergy", "DataSys", "RetailPlus" };
+        for (int i = 0; i < scenario.EmployerCount; i++)
+        {
+            var employer = new Engine.Employer
+            {
+                Name = employerNames[i % employerNames.Length] + (i / employerNames.Length > 0 ? $" #{i / employerNames.Length + 1}" : ""),
+                Type = (Engine.EmployerType)(i % 3),
+                DistrictId = districts[random.Next(districts.Count)].Id,
+                MaxEmployees = 5 + random.Next(20),
+                WageBudget = 50000 + random.Next(100000)
+            };
+            WorldEngine.State.Employers.Add(employer);
+            
+            // Create job listings
+            for (int j = 0; j < random.Next(1, 4); j++)
+            {
+                WorldEngine.State.LaborMarket.OpenPositions.Add(new Engine.JobListing
+                {
+                    EmployerId = employer.Id,
+                    Title = $"Position at {employer.Name}",
+                    Wage = scenario.Economy.MinimumWage + random.Next(2000),
+                    LocationDistrictId = employer.DistrictId
+                });
+            }
+        }
+        
+        // Create housing units
+        for (int i = 0; i < scenario.HousingUnits; i++)
+        {
+            WorldEngine.State.HousingMarket.AvailableUnits.Add(new Engine.HousingUnit
+            {
+                DistrictId = districts[random.Next(districts.Count)].Id,
+                Capacity = 1 + random.Next(4),
+                Rent = scenario.Economy.AverageRent * (decimal)(0.7 + random.NextDouble() * 0.6),
+                IsOccupied = false
+            });
+        }
+        
+        // Create citizens
+        var firstNames = new[] { "Alex", "Sam", "Jordan", "Taylor", "Morgan", "Casey", "Riley", "Quinn", "Avery", "Charlie" };
+        var lastNames = new[] { "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis", "Martinez", "Wilson" };
+        
+        for (int i = 0; i < scenario.InitialPopulation; i++)
+        {
+            var citizen = new Agents.Citizen
+            {
+                Name = $"{firstNames[random.Next(firstNames.Length)]} {lastNames[random.Next(lastNames.Length)]}",
+                Age = 18 + random.Next(50),
+                Traits = new Agents.CitizenTraits
+                {
+                    Sociability = random.NextDouble(),
+                    RiskTolerance = random.NextDouble(),
+                    Frugality = random.NextDouble(),
+                    Ambition = random.NextDouble(),
+                    Stability = random.NextDouble()
+                },
+                Resources = new Agents.CitizenResources
+                {
+                    Cash = 500 + random.Next(5000),
+                    MonthlyIncome = 0,
+                    MonthlyExpenses = 0
+                },
+                Needs = new Agents.CitizenNeeds
+                {
+                    Hunger = random.NextDouble() * 0.3,
+                    Energy = random.NextDouble() * 0.3,
+                    Social = random.NextDouble() * 0.3,
+                    Shelter = 0,
+                    Income = 0.5
+                },
+                State = Agents.CitizenState.Unemployed,
+                CurrentDistrictId = districts[random.Next(districts.Count)].Id
+            };
+            
+            // Add random skills
+            var skillNames = new[] { "Programming", "Management", "Sales", "Healthcare", "Education", "Logistics", "Finance" };
+            for (int j = 0; j < random.Next(1, 4); j++)
+            {
+                citizen.Skills.Add(new Agents.Skill
+                {
+                    Name = skillNames[random.Next(skillNames.Length)],
+                    Level = 0.3 + random.NextDouble() * 0.7,
+                    YearsExperience = random.Next(10)
+                });
+            }
+            
+            WorldEngine.State.Citizens.Add(citizen);
+        }
+        
+        // Create households and assign housing
+        var availableUnits = WorldEngine.State.HousingMarket.AvailableUnits.Where(u => !u.IsOccupied).ToList();
+        var citizensToHouse = WorldEngine.State.Citizens.ToList();
+        
+        int householdIndex = 0;
+        while (citizensToHouse.Count > 0 && availableUnits.Count > 0)
+        {
+            var unit = availableUnits[random.Next(availableUnits.Count)];
+            var household = new Engine.Household
+            {
+                HousingUnitId = unit.Id
+            };
+            
+            int householdSize = Math.Min(unit.Capacity, random.Next(1, 4));
+            householdSize = Math.Min(householdSize, citizensToHouse.Count);
+            
+            for (int j = 0; j < householdSize; j++)
+            {
+                var citizen = citizensToHouse[0];
+                citizen.HouseholdId = household.Id;
+                citizen.CurrentDistrictId = unit.DistrictId;
+                household.MemberIds.Add(citizen.Id);
+                citizensToHouse.RemoveAt(0);
+            }
+            
+            unit.IsOccupied = true;
+            availableUnits.Remove(unit);
+            WorldEngine.State.Households.Add(household);
+            householdIndex++;
+        }
+        
+        StateHasChanged();
+    }
+}

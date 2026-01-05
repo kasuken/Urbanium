@@ -1,0 +1,181 @@
+@page "/housing-market"
+@inject WorldEngine WorldEngine
+
+<PageTitle>Housing Market</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Housing Market</MudText>
+<MudText Typo="Typo.subtitle1" Class="mb-4" Color="Color.Secondary">
+    Available housing units, rent dynamics, and occupancy rates.
+</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="3">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6">Total Units</MudText>
+            <MudText Typo="Typo.h3" Color="Color.Primary">@WorldEngine.State.HousingMarket.AvailableUnits.Count</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="3">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6">Available</MudText>
+            <MudText Typo="Typo.h3" Color="Color.Success">@WorldEngine.State.HousingMarket.AvailableUnits.Count(u => !u.IsOccupied)</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="3">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6">Occupied</MudText>
+            <MudText Typo="Typo.h3" Color="Color.Warning">@WorldEngine.State.HousingMarket.AvailableUnits.Count(u => u.IsOccupied)</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="3">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6">Average Rent</MudText>
+            <MudText Typo="Typo.h3" Color="Color.Secondary">
+                @(WorldEngine.State.HousingMarket.AvailableUnits
+                    .Select(u => u.Rent)
+                    .DefaultIfEmpty(0)
+                    .Average().ToString("C0"))
+            </MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudGrid Class="mt-4">
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">Housing by District</MudText>
+            
+            @if (WorldEngine.State.Geography.Districts.Count == 0)
+            {
+                <MudAlert Severity="Severity.Info">No districts defined.</MudAlert>
+            }
+            else
+            {
+                <MudSimpleTable Dense="true" Hover="true">
+                    <thead>
+                        <tr>
+                            <th>District</th>
+                            <th>Units</th>
+                            <th>Available</th>
+                            <th>Avg. Rent</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var district in WorldEngine.State.Geography.Districts)
+                        {
+                            var districtUnits = WorldEngine.State.HousingMarket.AvailableUnits
+                                .Where(u => u.DistrictId == district.Id).ToList();
+                            <tr>
+                                <td>@district.Name</td>
+                                <td>@districtUnits.Count</td>
+                                <td>@districtUnits.Count(u => !u.IsOccupied)</td>
+                                <td>@(districtUnits.Any() ? districtUnits.Average(u => u.Rent).ToString("C0") : "-")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            }
+        </MudPaper>
+    </MudItem>
+    
+    <MudItem xs="12" md="6">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Class="mb-4">Housing Pressure</MudText>
+            
+            @{
+                var totalUnits = WorldEngine.State.HousingMarket.AvailableUnits.Count;
+                var occupied = WorldEngine.State.HousingMarket.AvailableUnits.Count(u => u.IsOccupied);
+                var pressure = totalUnits > 0 ? (double)occupied / totalUnits : 0;
+            }
+            
+            <MudStack Spacing="4">
+                <MudStack Row="true" Justify="Justify.SpaceBetween">
+                    <MudText>Occupancy Rate</MudText>
+                    <MudText Color="@(pressure > 0.9 ? Color.Error : pressure > 0.7 ? Color.Warning : Color.Success)">
+                        @pressure.ToString("P0")
+                    </MudText>
+                </MudStack>
+                <MudProgressLinear Color="@(pressure > 0.9 ? Color.Error : pressure > 0.7 ? Color.Warning : Color.Success)" 
+                    Value="@(pressure * 100)" Size="Size.Large" />
+                
+                @if (pressure > 0.9)
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true">
+                        Critical housing shortage! Less than 10% vacancy.
+                    </MudAlert>
+                }
+                else if (pressure > 0.7)
+                {
+                    <MudAlert Severity="Severity.Warning" Dense="true">
+                        Housing market is tight. Limited availability.
+                    </MudAlert>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Success" Dense="true">
+                        Healthy housing market with adequate availability.
+                    </MudAlert>
+                }
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudPaper Class="pa-4 mt-4" Elevation="2">
+    <MudText Typo="Typo.h6" Class="mb-4">Available Housing Units</MudText>
+    
+    @{
+        var availableUnits = WorldEngine.State.HousingMarket.AvailableUnits.Where(u => !u.IsOccupied).ToList();
+    }
+    
+    @if (availableUnits.Count == 0)
+    {
+        <MudAlert Severity="Severity.Warning">
+            No housing units currently available!
+        </MudAlert>
+    }
+    else
+    {
+        <MudDataGrid Items="@availableUnits" Dense="true" Hover="true" Striped="true">
+            <Columns>
+                <TemplateColumn Title="District">
+                    <CellTemplate>
+                        @{
+                            var district = WorldEngine.State.Geography.Districts
+                                .FirstOrDefault(d => d.Id == context.Item.DistrictId);
+                        }
+                        @if (district != null)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@district.Name</MudChip>
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+                <PropertyColumn Property="x => x.Capacity" Title="Capacity" />
+                <PropertyColumn Property="x => x.Rent" Title="Monthly Rent" Format="C0" />
+                <TemplateColumn Title="Affordability">
+                    <CellTemplate>
+                        @{
+                            // Assuming 30% of median income for affordability
+                            var medianIncome = WorldEngine.State.Citizens
+                                .Where(c => c.Resources.MonthlyIncome > 0)
+                                .Select(c => c.Resources.MonthlyIncome)
+                                .DefaultIfEmpty(2000)
+                                .OrderBy(x => x)
+                                .Skip(WorldEngine.State.Citizens.Count / 2)
+                                .FirstOrDefault();
+                            var affordable = context.Item.Rent <= medianIncome * 0.3m;
+                        }
+                        @if (affordable)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Check" Color="Color.Success" Size="Size.Small" />
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Warning" Size="Size.Small" />
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    }
+</MudPaper>

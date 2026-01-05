@@ -1,0 +1,103 @@
+@page "/households"
+@inject WorldEngine WorldEngine
+
+<PageTitle>Households</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Households</MudText>
+<MudText Typo="Typo.subtitle1" Class="mb-4" Color="Color.Secondary">
+    Household units containing citizens and their housing arrangements.
+</MudText>
+
+<MudGrid>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6">Total Households</MudText>
+            <MudText Typo="Typo.h3" Color="Color.Primary">@WorldEngine.State.Households.Count</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6">Avg. Household Size</MudText>
+            <MudText Typo="Typo.h3" Color="Color.Secondary">
+                @(WorldEngine.State.Households.Count > 0 
+                    ? WorldEngine.State.Households.Average(h => h.MemberIds.Count).ToString("F1") 
+                    : "0")
+            </MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6">Homeless Citizens</MudText>
+            <MudText Typo="Typo.h3" Color="Color.Warning">
+                @WorldEngine.State.Citizens.Count(c => !c.HouseholdId.HasValue)
+            </MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudPaper Class="pa-4 mt-4" Elevation="2">
+    <MudText Typo="Typo.h6" Class="mb-4">Household List</MudText>
+    
+    @if (WorldEngine.State.Households.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">
+            No households in the simulation. Load a scenario to create households.
+        </MudAlert>
+    }
+    else
+    {
+        <MudDataGrid Items="@WorldEngine.State.Households" Dense="true" Hover="true" Striped="true">
+            <Columns>
+                <TemplateColumn Title="ID">
+                    <CellTemplate>
+                        <MudText Typo="Typo.caption">@context.Item.Id.ToString()[..8]...</MudText>
+                    </CellTemplate>
+                </TemplateColumn>
+                <PropertyColumn Property="x => x.MemberIds.Count" Title="Members" />
+                <TemplateColumn Title="Location">
+                    <CellTemplate>
+                        @{
+                            var unit = WorldEngine.State.HousingMarket.AvailableUnits
+                                .FirstOrDefault(u => u.Id == context.Item.HousingUnitId);
+                            var district = unit != null 
+                                ? WorldEngine.State.Geography.Districts.FirstOrDefault(d => d.Id == unit.DistrictId) 
+                                : null;
+                        }
+                        @if (district != null)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Info">@district.Name</MudChip>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Warning">Unhoused</MudChip>
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+                <PropertyColumn Property="x => x.TotalIncome" Title="Total Income" Format="C0" />
+                <PropertyColumn Property="x => x.Savings" Title="Savings" Format="C0" />
+                <TemplateColumn Title="Members">
+                    <CellTemplate>
+                        <MudStack Row="true" Spacing="1">
+                            @foreach (var memberId in context.Item.MemberIds.Take(3))
+                            {
+                                var citizen = WorldEngine.State.Citizens.FirstOrDefault(c => c.Id == memberId);
+                                if (citizen != null)
+                                {
+                                    <MudAvatar Size="Size.Small" Color="Color.Primary">
+                                        @citizen.Name[0]
+                                    </MudAvatar>
+                                }
+                            }
+                            @if (context.Item.MemberIds.Count > 3)
+                            {
+                                <MudAvatar Size="Size.Small" Color="Color.Default">
+                                    +@(context.Item.MemberIds.Count - 3)
+                                </MudAvatar>
+                            }
+                        </MudStack>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    }
+</MudPaper>

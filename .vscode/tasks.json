@@ -1,0 +1,27 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build Urbanium.Web",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/src/Urbanium.Web/Urbanium.Web.csproj"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "run Urbanium.Web",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "run",
+                "--project",
+                "${workspaceFolder}/src/Urbanium.Web/Urbanium.Web.csproj"
+            ],
+            "problemMatcher": "$msCompile",
+            "dependsOn": ["build Urbanium.Web"]
+        }
+    ]
+}
