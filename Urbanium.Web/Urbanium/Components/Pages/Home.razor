@@ -1,7 +1,161 @@
 ﻿@page "/"
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Urbanium - City Simulation</PageTitle>
 
-<h1>Hello, world!</h1>
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    
+    @* Time Control Widget *@
+    <MudPaper Elevation="3" Class="pa-4 mb-4">
+        <MudGrid Justify="Justify.SpaceBetween">
+            <MudItem xs="12" md="3" Class="d-flex align-center">
+                <MudButton Variant="Variant.Filled" 
+                          Color="@(isTimeRunning ? Color.Error : Color.Success)" 
+                          StartIcon="@(isTimeRunning ? Icons.Material.Filled.Pause : Icons.Material.Filled.PlayArrow)"
+                          OnClick="ToggleTime"
+                          FullWidth="true">
+                    @(isTimeRunning ? "Stop Time" : "Start Time")
+                </MudButton>
+            </MudItem>
+            <MudItem xs="12" md="2">
+                <MudText Typo="Typo.h6" Align="Align.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Class="mr-1"/> Day @currentDay
+                </MudText>
+            </MudItem>
+            <MudItem xs="12" md="2">
+                <MudText Typo="Typo.h6" Align="Align.Center">
+                    <MudIcon Icon="@Icons.Material.Filled.AccessTime" Class="mr-1"/> @currentTime
+                </MudText>
+            </MudItem>
+            <MudItem xs="12" md="2">
+                <MudText Typo="Typo.h6" Align="Align.Center">
+                    <MudIcon Icon="@GetWeatherIcon()" Class="mr-1"/> @currentWeather
+                </MudText>
+            </MudItem>
+            <MudItem xs="12" md="2">
+                <MudText Typo="Typo.h6" Align="Align.Center">
+                    <MudIcon Icon="@GetSeasonIcon()" Class="mr-1"/> @currentSeason
+                </MudText>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
 
-Welcome to your new app.
+    @* AI Mayor Section *@
+    <MudPaper Elevation="3" Class="pa-6 mb-4 text-center">
+        <MudText Typo="Typo.h4" Class="mb-2">🤖 AI Mayor</MudText>
+        <MudText Typo="Typo.h6" Color="Color.Primary">Mayor Alexandra Sterling</MudText>
+        <MudText Typo="Typo.body1" Class="mt-2">
+            "Managing Urbanium with efficiency and care for all citizens."
+        </MudText>
+        <MudChip T="string" Color="Color.Info" Class="mt-2">Approval Rating: 87%</MudChip>
+    </MudPaper>
+
+    @* Citizens Section *@
+    <MudText Typo="Typo.h5" Class="mb-3">👥 Citizens</MudText>
+    <MudGrid Class="mb-4">
+        @foreach (var citizen in citizens)
+        {
+            <MudItem xs="12" sm="6" md="4" lg="2">
+                <MudCard Elevation="2">
+                    <MudCardContent Class="text-center">
+                        <MudText Typo="Typo.h4">@citizen.Emoji</MudText>
+                        <MudText Typo="Typo.h6" Class="mt-2">@citizen.Name</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@citizen.Occupation</MudText>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Class="mt-2">Active</MudChip>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+
+    @* Buildings Section *@
+    <MudText Typo="Typo.h5" Class="mb-3">🏙️ City Buildings</MudText>
+    <MudGrid>
+        @foreach (var building in buildings)
+        {
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudCard Elevation="2" Class="pa-2">
+                    <MudCardContent Class="text-center">
+                        <MudText Typo="Typo.h3" Class="mb-2">@building.Icon</MudText>
+                        <MudText Typo="Typo.h6">@building.Name</MudText>
+                        <MudProgressLinear Color="@building.StatusColor" Value="@building.Occupancy" Class="mt-3" />
+                        <MudText Typo="Typo.caption" Class="mt-1">@building.Occupancy% Occupancy</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+
+</MudContainer>
+
+@code {
+    private bool isTimeRunning = false;
+    private int currentDay = 1;
+    private string currentTime = "08:00";
+    private string currentWeather = "Sunny";
+    private string currentSeason = "Spring";
+
+    private List<Citizen> citizens = new()
+    {
+        new Citizen { Name = "James Chen", Emoji = "👨‍💼", Occupation = "Business Owner" },
+        new Citizen { Name = "Maria Rodriguez", Emoji = "👩‍⚕️", Occupation = "Doctor" },
+        new Citizen { Name = "Robert Williams", Emoji = "👨‍🍳", Occupation = "Chef" },
+        new Citizen { Name = "Sarah Johnson", Emoji = "👩‍🎓", Occupation = "Teacher" },
+        new Citizen { Name = "Michael Park", Emoji = "👨‍🔧", Occupation = "Mechanic" },
+        new Citizen { Name = "Emily Davis", Emoji = "👩‍🚒", Occupation = "Firefighter" }
+    };
+
+    private List<Building> buildings = new()
+    {
+        new Building { Name = "Coffee Shop", Icon = "☕", Occupancy = 65, StatusColor = Color.Warning },
+        new Building { Name = "Restaurant", Icon = "🍽️", Occupancy = 80, StatusColor = Color.Success },
+        new Building { Name = "Car Shop", Icon = "🚗", Occupancy = 45, StatusColor = Color.Info },
+        new Building { Name = "Fire Station", Icon = "🚒", Occupancy = 90, StatusColor = Color.Error },
+        new Building { Name = "Hospital", Icon = "🏥", Occupancy = 70, StatusColor = Color.Primary },
+        new Building { Name = "Police Station", Icon = "🚓", Occupancy = 85, StatusColor = Color.Dark },
+        new Building { Name = "Fast Food", Icon = "🍔", Occupancy = 95, StatusColor = Color.Warning },
+        new Building { Name = "Office", Icon = "🏢", Occupancy = 60, StatusColor = Color.Secondary }
+    };
+
+    private void ToggleTime()
+    {
+        isTimeRunning = !isTimeRunning;
+    }
+
+    private string GetWeatherIcon()
+    {
+        return currentWeather switch
+        {
+            "Sunny" => Icons.Material.Filled.WbSunny,
+            "Rainy" => Icons.Material.Filled.WaterDrop,
+            "Cloudy" => Icons.Material.Filled.Cloud,
+            _ => Icons.Material.Filled.WbSunny
+        };
+    }
+
+    private string GetSeasonIcon()
+    {
+        return currentSeason switch
+        {
+            "Spring" => Icons.Material.Filled.LocalFlorist,
+            "Summer" => Icons.Material.Filled.BeachAccess,
+            "Autumn" => Icons.Material.Filled.Spa,
+            "Winter" => Icons.Material.Filled.AcUnit,
+            _ => Icons.Material.Filled.LocalFlorist
+        };
+    }
+
+    private class Citizen
+    {
+        public string Name { get; set; } = "";
+        public string Emoji { get; set; } = "";
+        public string Occupation { get; set; } = "";
+    }
+
+    private class Building
+    {
+        public string Name { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public int Occupancy { get; set; }
+        public Color StatusColor { get; set; }
+    }
+}
