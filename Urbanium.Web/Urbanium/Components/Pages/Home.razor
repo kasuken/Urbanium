@@ -1,161 +1,516 @@
 ﻿@page "/"
+@using Urbanium.Services
+@using Urbanium.Models
+@implements IDisposable
+@rendermode InteractiveServer
 
 <PageTitle>Urbanium - City Simulation</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     
-    @* Time Control Widget *@
     <MudPaper Elevation="3" Class="pa-4 mb-4">
         <MudGrid Justify="Justify.SpaceBetween">
-            <MudItem xs="12" md="3" Class="d-flex align-center">
+            <MudItem xs="12" md="2" Class="d-flex align-center">
                 <MudButton Variant="Variant.Filled" 
-                          Color="@(isTimeRunning ? Color.Error : Color.Success)" 
-                          StartIcon="@(isTimeRunning ? Icons.Material.Filled.Pause : Icons.Material.Filled.PlayArrow)"
-                          OnClick="ToggleTime"
+                          Color="Color.Success" 
+                          StartIcon="@Icons.Material.Filled.PlayArrow"
+                          OnClick="StartTime"
+                          Disabled="isTimeRunning"
                           FullWidth="true">
-                    @(isTimeRunning ? "Stop Time" : "Start Time")
+                    Start
+                </MudButton>
+            </MudItem>
+            <MudItem xs="12" md="2" Class="d-flex align-center">
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Warning" 
+                          StartIcon="@Icons.Material.Filled.Pause"
+                          OnClick="PauseTime"
+                          Disabled="!isTimeRunning"
+                          FullWidth="true">
+                    Pause
+                </MudButton>
+            </MudItem>
+            <MudItem xs="12" md="2" Class="d-flex align-center">
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Error" 
+                          StartIcon="@Icons.Material.Filled.Stop"
+                          OnClick="StopTime"
+                          FullWidth="true">
+                    Stop
                 </MudButton>
             </MudItem>
             <MudItem xs="12" md="2">
                 <MudText Typo="Typo.h6" Align="Align.Center">
-                    <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" Class="mr-1"/> Day @currentDay
+                    Day @CityTime.CurrentDay
                 </MudText>
             </MudItem>
             <MudItem xs="12" md="2">
                 <MudText Typo="Typo.h6" Align="Align.Center">
-                    <MudIcon Icon="@Icons.Material.Filled.AccessTime" Class="mr-1"/> @currentTime
+                    @CityTime.CurrentTimeString
                 </MudText>
             </MudItem>
             <MudItem xs="12" md="2">
                 <MudText Typo="Typo.h6" Align="Align.Center">
-                    <MudIcon Icon="@GetWeatherIcon()" Class="mr-1"/> @currentWeather
-                </MudText>
-            </MudItem>
-            <MudItem xs="12" md="2">
-                <MudText Typo="Typo.h6" Align="Align.Center">
-                    <MudIcon Icon="@GetSeasonIcon()" Class="mr-1"/> @currentSeason
+                    @CityTime.CurrentSeason
                 </MudText>
             </MudItem>
         </MudGrid>
     </MudPaper>
 
-    @* AI Mayor Section *@
-    <MudPaper Elevation="3" Class="pa-6 mb-4 text-center">
-        <MudText Typo="Typo.h4" Class="mb-2">🤖 AI Mayor</MudText>
-        <MudText Typo="Typo.h6" Color="Color.Primary">Mayor Alexandra Sterling</MudText>
-        <MudText Typo="Typo.body1" Class="mt-2">
-            "Managing Urbanium with efficiency and care for all citizens."
-        </MudText>
-        <MudChip T="string" Color="Color.Info" Class="mt-2">Approval Rating: 87%</MudChip>
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="3" Class="pa-3" Style="height: 220px;">
+                <MudText Typo="Typo.h6" Class="mb-2">City Statistics</MudText>
+                <MudDivider Class="mb-2" />
+                <MudStack Spacing="1">
+                    <MudText Typo="Typo.body2">Population: @Simulation.CityState.Statistics.TotalPopulation</MudText>
+                    <MudText Typo="Typo.body2">Unemployment: @Simulation.CityState.Economy.UnemploymentRate.ToString("F1")%</MudText>
+                    <MudText Typo="Typo.body2">Available Jobs: @Simulation.CityState.Jobs.TotalOpenings</MudText>
+                    <MudText Typo="Typo.body2">Available Housing: @Simulation.CityState.Housing.AvailableUnits</MudText>
+                    <MudText Typo="Typo.body2">Avg Happiness: @Simulation.CityState.Statistics.AverageHappiness.ToString("F0")%</MudText>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="3" Class="pa-3" Style="height: 220px;">
+                <MudStack Row="true" Class="mb-2">
+                    <MudText Typo="Typo.h4">@Simulation.Mayor.Emoji</MudText>
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.h6">@Simulation.Mayor.Name</MudText>
+                        <MudText Typo="Typo.caption">Approval: @Simulation.Mayor.ApprovalRating%</MudText>
+                    </MudStack>
+                </MudStack>
+                <MudDivider Class="mb-2" />
+                <MudChip T="string" Color="Color.Primary" Size="Size.Small" Class="mb-2">
+                    Next decision in @Simulation.Mayor.DaysUntilNextDecision days
+                </MudChip>
+                @if (!string.IsNullOrEmpty(Simulation.Mayor.LastDecision))
+                {
+                    <MudText Typo="Typo.caption" Class="mb-1"><strong>Last Action:</strong> @Simulation.Mayor.LastDecision</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="fst-italic">"@Simulation.Mayor.LastDecisionReason"</MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">Awaiting first policy review...</MudText>
+                }
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.caption"><strong>Tax Rate:</strong> @Simulation.CityState.Policies.TaxRate% | <strong>Min Wage:</strong> $@Simulation.CityState.Policies.MinimumWage</MudText>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="3" Class="pa-3" Style="height: 220px;">
+                <MudText Typo="Typo.h6" Class="mb-2">Activity Log</MudText>
+                <MudDivider Class="mb-2" />
+                <div style="height: 150px; overflow-y: auto;">
+                    @if (activityLog.Count == 0)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mt-4">
+                            No activities yet. Start the simulation.
+                        </MudText>
+                    }
+                    else
+                    {
+                        @foreach (var activity in activityLog.AsEnumerable().Reverse().Take(50))
+                        {
+                            <MudText Typo="Typo.caption" Class="mb-1">
+                                @activity.Emoji <strong>[@activity.Timestamp]</strong> @activity.Message
+                            </MudText>
+                        }
+                    }
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudPaper Elevation="3" Class="pa-4 mb-4">
+        <MudText Typo="Typo.h5" Class="mb-3" Align="Align.Center">Citizens of Urbanium</MudText>
+        <MudGrid Spacing="3">
+            @foreach (var c in citizens)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudCard Elevation="2">
+                        <MudCardHeader>
+                            <CardHeaderAvatar>
+                                <MudText Typo="Typo.h3">@c.Emoji</MudText>
+                            </CardHeaderAvatar>
+                            <CardHeaderContent>
+                                <MudText Typo="Typo.h6">@c.Name</MudText>
+                                <MudText Typo="Typo.caption">Age @c.State.Age (@c.State.LifeStage)</MudText>
+                            </CardHeaderContent>
+                            <CardHeaderActions>
+                                <MudChip T="string" Color="@GetActivityColor(c.State.Activity)" Size="Size.Small">
+                                    @c.State.Activity
+                                </MudChip>
+                            </CardHeaderActions>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudText Typo="Typo.caption" Color="Color.Primary" Class="mb-1">@c.State.ActivityDescription</MudText>
+                            <MudDivider Class="my-2"/>
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">Needs</MudText>
+                            <MudGrid Spacing="1">
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption">Hunger</MudText>
+                                    <MudProgressLinear Value="@c.State.Needs.Hunger" Color="@GetNeedColor(c.State.Needs.Hunger)" Size="Size.Small" />
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption">Energy</MudText>
+                                    <MudProgressLinear Value="@c.State.Needs.Energy" Color="@GetNeedColor(c.State.Needs.Energy)" Size="Size.Small" />
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption">Social</MudText>
+                                    <MudProgressLinear Value="@c.State.Needs.Social" Color="@GetNeedColor(c.State.Needs.Social)" Size="Size.Small" />
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption">Happy</MudText>
+                                    <MudProgressLinear Value="@c.State.Needs.Happiness" Color="@GetNeedColor(c.State.Needs.Happiness)" Size="Size.Small" />
+                                </MudItem>
+                            </MudGrid>
+                            <MudDivider Class="my-2"/>
+                            <MudGrid Spacing="1">
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption"><strong>Job:</strong> @c.Occupation</MudText>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption"><strong>Housing:</strong> @c.State.Housing.Status</MudText>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption"><strong>Savings:</strong> $@c.State.Finances.Savings.ToString("N0")</MudText>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.caption"><strong>Status:</strong> @c.State.Family.Status</MudText>
+                                </MudItem>
+                            </MudGrid>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
     </MudPaper>
 
-    @* Citizens Section *@
-    <MudText Typo="Typo.h5" Class="mb-3">👥 Citizens</MudText>
-    <MudGrid Class="mb-4">
-        @foreach (var citizen in citizens)
-        {
-            <MudItem xs="12" sm="6" md="4" lg="2">
-                <MudCard Elevation="2">
-                    <MudCardContent Class="text-center">
-                        <MudText Typo="Typo.h4">@citizen.Emoji</MudText>
-                        <MudText Typo="Typo.h6" Class="mt-2">@citizen.Name</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">@citizen.Occupation</MudText>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Class="mt-2">Active</MudChip>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-        }
-    </MudGrid>
-
-    @* Buildings Section *@
-    <MudText Typo="Typo.h5" Class="mb-3">🏙️ City Buildings</MudText>
-    <MudGrid>
-        @foreach (var building in buildings)
-        {
-            <MudItem xs="12" sm="6" md="4" lg="3">
-                <MudCard Elevation="2" Class="pa-2">
-                    <MudCardContent Class="text-center">
-                        <MudText Typo="Typo.h3" Class="mb-2">@building.Icon</MudText>
-                        <MudText Typo="Typo.h6">@building.Name</MudText>
-                        <MudProgressLinear Color="@building.StatusColor" Value="@building.Occupancy" Class="mt-3" />
-                        <MudText Typo="Typo.caption" Class="mt-1">@building.Occupancy% Occupancy</MudText>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-        }
-    </MudGrid>
+    <MudPaper Elevation="3" Class="pa-4 mb-4">
+        <MudText Typo="Typo.h5" Class="mb-3" Align="Align.Center">Buildings</MudText>
+        <MudGrid Spacing="3">
+            @foreach (var b in buildings)
+            {
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="2" Class="pa-2">
+                        <MudCardContent Class="text-center">
+                            <MudText Typo="Typo.h3" Class="mb-2">@b.Icon</MudText>
+                            <MudText Typo="Typo.h6">@b.Name</MudText>
+                            @if (b.Type == BuildingType.Residential)
+                            {
+                                <MudText Typo="Typo.caption">@b.CurrentResidents / @b.Capacity residents</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption">@b.Occupancy% Occupancy</MudText>
+                            }
+                            <MudProgressLinear Color="@b.StatusColor" Value="@GetBuildingProgress(b)" Class="mt-3" />
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
 
 </MudContainer>
 
 @code {
+    [Inject] private CityTimeService CityTime { get; set; } = default!;
+    [Inject] private CitySimulationService Simulation { get; set; } = default!;
+    
     private bool isTimeRunning = false;
-    private int currentDay = 1;
-    private string currentTime = "08:00";
-    private string currentWeather = "Sunny";
-    private string currentSeason = "Spring";
+    private bool isTimePaused = false;
+    private System.Threading.Timer? _timer;
 
-    private List<Citizen> citizens = new()
-    {
-        new Citizen { Name = "James Chen", Emoji = "👨‍💼", Occupation = "Business Owner" },
-        new Citizen { Name = "Maria Rodriguez", Emoji = "👩‍⚕️", Occupation = "Doctor" },
-        new Citizen { Name = "Robert Williams", Emoji = "👨‍🍳", Occupation = "Chef" },
-        new Citizen { Name = "Sarah Johnson", Emoji = "👩‍🎓", Occupation = "Teacher" },
-        new Citizen { Name = "Michael Park", Emoji = "👨‍🔧", Occupation = "Mechanic" },
-        new Citizen { Name = "Emily Davis", Emoji = "👩‍🚒", Occupation = "Firefighter" }
-    };
+    private List<LogEntry> activityLog = new();
+    private List<Citizen> citizens = new();
+    private List<Building> buildings = new();
 
-    private List<Building> buildings = new()
+    protected override void OnInitialized()
     {
-        new Building { Name = "Coffee Shop", Icon = "☕", Occupancy = 65, StatusColor = Color.Warning },
-        new Building { Name = "Restaurant", Icon = "🍽️", Occupancy = 80, StatusColor = Color.Success },
-        new Building { Name = "Car Shop", Icon = "🚗", Occupancy = 45, StatusColor = Color.Info },
-        new Building { Name = "Fire Station", Icon = "🚒", Occupancy = 90, StatusColor = Color.Error },
-        new Building { Name = "Hospital", Icon = "🏥", Occupancy = 70, StatusColor = Color.Primary },
-        new Building { Name = "Police Station", Icon = "🚓", Occupancy = 85, StatusColor = Color.Dark },
-        new Building { Name = "Fast Food", Icon = "🍔", Occupancy = 95, StatusColor = Color.Warning },
-        new Building { Name = "Office", Icon = "🏢", Occupancy = 60, StatusColor = Color.Secondary }
-    };
-
-    private void ToggleTime()
-    {
-        isTimeRunning = !isTimeRunning;
+        CityTime.OnTimeChanged += OnTimeChanged;
+        Simulation.OnActivityLogged += OnActivityLogged;
+        Simulation.OnCitizenStateChanged += OnCitizenStateChanged;
+        Simulation.OnCityStateChanged += OnCityStateChanged;
+        Simulation.OnMayorDecision += OnMayorDecision;
+        
+        citizens = GetInitialCitizens();
+        buildings = GetInitialBuildings();
+        
+        Simulation.Initialize(citizens, buildings);
     }
 
-    private string GetWeatherIcon()
+    private void OnTimeChanged()
     {
-        return currentWeather switch
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnActivityLogged(object? sender, ActivityLogEventArgs e)
+    {
+        activityLog.Add(new LogEntry
         {
-            "Sunny" => Icons.Material.Filled.WbSunny,
-            "Rainy" => Icons.Material.Filled.WaterDrop,
-            "Cloudy" => Icons.Material.Filled.Cloud,
-            _ => Icons.Material.Filled.WbSunny
+            Timestamp = e.Timestamp,
+            Message = e.Message,
+            Emoji = e.Emoji,
+            Category = e.Category
+        });
+        
+        if (activityLog.Count > 100)
+            activityLog.RemoveAt(0);
+        
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnCitizenStateChanged(object? sender, CitizenStateChangedEventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnCityStateChanged(object? sender, EventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void OnMayorDecision(object? sender, MayorDecision e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void StartTime()
+    {
+        if (!isTimeRunning)
+        {
+            isTimeRunning = true;
+            isTimePaused = false;
+            
+            activityLog.Add(new LogEntry
+            {
+                Timestamp = $"Day {CityTime.CurrentDay} {CityTime.CurrentTimeString}",
+                Message = "City simulation started",
+                Emoji = "▶️",
+                Category = "System"
+            });
+            
+            _timer = new System.Threading.Timer(_ =>
+            {
+                CityTime.AdvanceHour();
+            }, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
+        }
+    }
+
+    private void PauseTime()
+    {
+        if (isTimeRunning)
+        {
+            isTimeRunning = false;
+            isTimePaused = true;
+            _timer?.Dispose();
+            _timer = null;
+            
+            activityLog.Add(new LogEntry
+            {
+                Timestamp = $"Day {CityTime.CurrentDay} {CityTime.CurrentTimeString}",
+                Message = "City simulation paused",
+                Emoji = "⏸️",
+                Category = "System"
+            });
+            
+            StateHasChanged();
+        }
+    }
+
+    private void StopTime()
+    {
+        isTimeRunning = false;
+        isTimePaused = false;
+        _timer?.Dispose();
+        _timer = null;
+        
+        CityTime.Reset();
+        Simulation.Reset();
+        
+        activityLog.Clear();
+        activityLog.Add(new LogEntry
+        {
+            Timestamp = $"Day {CityTime.CurrentDay} {CityTime.CurrentTimeString}",
+            Message = "City reset to initial state",
+            Emoji = "🔄",
+            Category = "System"
+        });
+        
+        StateHasChanged();
+    }
+
+    private Color GetNeedColor(int value)
+    {
+        if (value < 20) return Color.Error;
+        if (value < 40) return Color.Warning;
+        if (value < 60) return Color.Info;
+        return Color.Success;
+    }
+
+    private Color GetActivityColor(CurrentActivity activity)
+    {
+        return activity switch
+        {
+            CurrentActivity.Working => Color.Primary,
+            CurrentActivity.Sleeping => Color.Secondary,
+            CurrentActivity.Eating => Color.Success,
+            CurrentActivity.Socializing => Color.Info,
+            CurrentActivity.OnDate => Color.Error,
+            CurrentActivity.LookingForJob => Color.Warning,
+            CurrentActivity.LookingForHousing => Color.Warning,
+            CurrentActivity.AtBar => Color.Dark,
+            _ => Color.Default
         };
     }
 
-    private string GetSeasonIcon()
+    private double GetBuildingProgress(Building b)
     {
-        return currentSeason switch
+        if (b.Type == BuildingType.Residential)
         {
-            "Spring" => Icons.Material.Filled.LocalFlorist,
-            "Summer" => Icons.Material.Filled.BeachAccess,
-            "Autumn" => Icons.Material.Filled.Spa,
-            "Winter" => Icons.Material.Filled.AcUnit,
-            _ => Icons.Material.Filled.LocalFlorist
+            if (b.Capacity == 0) return 0;
+            return (double)b.CurrentResidents / b.Capacity * 100;
+        }
+        return b.Occupancy;
+    }
+
+    private List<Citizen> GetInitialCitizens()
+    {
+        return new List<Citizen>
+        {
+            new Citizen 
+            { 
+                Name = "James Chen", 
+                Emoji = "👨‍💼", 
+                Occupation = "Business Owner",
+                Personality = new CitizenPersonality
+                {
+                    Openness = 75, Conscientiousness = 85, Extraversion = 70, Agreeableness = 55, EmotionalStability = 80,
+                    RiskTolerance = 80, Ambition = 90, Altruism = 60, Pragmatism = 85,
+                    PrimaryValue = "Success", SecondaryValue = "Innovation",
+                    Background = "Built a tech startup from scratch.",
+                    CoreMotivation = "Building wealth and creating opportunities",
+                    DecisionStyle = "Analytical and data-driven"
+                }
+            },
+            new Citizen 
+            { 
+                Name = "Maria Rodriguez", 
+                Emoji = "👩‍⚕️", 
+                Occupation = "Doctor",
+                Personality = new CitizenPersonality
+                {
+                    Openness = 70, Conscientiousness = 95, Extraversion = 50, Agreeableness = 85, EmotionalStability = 75,
+                    RiskTolerance = 30, Ambition = 60, Altruism = 95, Pragmatism = 70,
+                    PrimaryValue = "Health", SecondaryValue = "Community",
+                    Background = "Daughter of teachers.",
+                    CoreMotivation = "Healing others",
+                    DecisionStyle = "Careful and methodical"
+                }
+            },
+            new Citizen 
+            { 
+                Name = "Robert Williams", 
+                Emoji = "👨‍🍳", 
+                Occupation = "Chef",
+                Personality = new CitizenPersonality
+                {
+                    Openness = 90, Conscientiousness = 70, Extraversion = 75, Agreeableness = 80, EmotionalStability = 60,
+                    RiskTolerance = 65, Ambition = 70, Altruism = 75, Pragmatism = 55,
+                    PrimaryValue = "Creativity", SecondaryValue = "Joy",
+                    Background = "Trained in Paris.",
+                    CoreMotivation = "Creating memorable experiences",
+                    DecisionStyle = "Follows intuition"
+                }
+            },
+            new Citizen 
+            { 
+                Name = "Sarah Johnson", 
+                Emoji = "👩‍🎓", 
+                Occupation = "Teacher",
+                Personality = new CitizenPersonality
+                {
+                    Openness = 80, Conscientiousness = 85, Extraversion = 65, Agreeableness = 90, EmotionalStability = 70,
+                    RiskTolerance = 40, Ambition = 55, Altruism = 90, Pragmatism = 60,
+                    PrimaryValue = "Education", SecondaryValue = "Equity",
+                    Background = "First-generation college graduate.",
+                    CoreMotivation = "Empowering the next generation",
+                    DecisionStyle = "Collaborative"
+                }
+            },
+            new Citizen 
+            { 
+                Name = "Michael Park", 
+                Emoji = "👨‍🔧", 
+                Occupation = "Mechanic",
+                Personality = new CitizenPersonality
+                {
+                    Openness = 60, Conscientiousness = 80, Extraversion = 45, Agreeableness = 70, EmotionalStability = 85,
+                    RiskTolerance = 50, Ambition = 50, Altruism = 70, Pragmatism = 90,
+                    PrimaryValue = "Reliability", SecondaryValue = "Family",
+                    Background = "Third-generation mechanic.",
+                    CoreMotivation = "Providing for family",
+                    DecisionStyle = "Practical"
+                }
+            },
+            new Citizen 
+            { 
+                Name = "Emily Davis", 
+                Emoji = "👩‍🚒", 
+                Occupation = "Firefighter",
+                Personality = new CitizenPersonality
+                {
+                    Openness = 65, Conscientiousness = 90, Extraversion = 80, Agreeableness = 75, EmotionalStability = 95,
+                    RiskTolerance = 85, Ambition = 70, Altruism = 85, Pragmatism = 75,
+                    PrimaryValue = "Service", SecondaryValue = "Courage",
+                    Background = "Former military.",
+                    CoreMotivation = "Protecting the community",
+                    DecisionStyle = "Quick and decisive"
+                }
+            }
         };
     }
 
-    private class Citizen
+    private List<Building> GetInitialBuildings()
     {
-        public string Name { get; set; } = "";
+        return new List<Building>
+        {
+            new Building { Name = "Small House", Icon = "🏠", Type = BuildingType.Residential, Capacity = 4, CurrentResidents = 3, StatusColor = Color.Success },
+            new Building { Name = "Small House 2", Icon = "🏠", Type = BuildingType.Residential, Capacity = 4, CurrentResidents = 4, StatusColor = Color.Success },
+            new Building { Name = "Medium House", Icon = "🏡", Type = BuildingType.Residential, Capacity = 8, CurrentResidents = 6, StatusColor = Color.Info },
+            new Building { Name = "Medium House 2", Icon = "🏡", Type = BuildingType.Residential, Capacity = 8, CurrentResidents = 5, StatusColor = Color.Info },
+            new Building { Name = "Skyscraper", Icon = "🏢", Type = BuildingType.Residential, Capacity = 50, CurrentResidents = 38, StatusColor = Color.Primary },
+            new Building { Name = "Skyscraper 2", Icon = "🏢", Type = BuildingType.Residential, Capacity = 50, CurrentResidents = 42, StatusColor = Color.Primary },
+            new Building { Name = "Coffee Shop", Icon = "☕", Type = BuildingType.Commercial, Occupancy = 65, StatusColor = Color.Warning },
+            new Building { Name = "Restaurant", Icon = "🍽️", Type = BuildingType.Commercial, Occupancy = 80, StatusColor = Color.Success },
+            new Building { Name = "Car Shop", Icon = "🚗", Type = BuildingType.Commercial, Occupancy = 45, StatusColor = Color.Info },
+            new Building { Name = "Fire Station", Icon = "🚒", Type = BuildingType.Commercial, Occupancy = 90, StatusColor = Color.Error },
+            new Building { Name = "Hospital", Icon = "🏥", Type = BuildingType.Commercial, Occupancy = 70, StatusColor = Color.Primary },
+            new Building { Name = "Police Station", Icon = "🚓", Type = BuildingType.Commercial, Occupancy = 85, StatusColor = Color.Dark },
+            new Building { Name = "Fast Food", Icon = "🍔", Type = BuildingType.Commercial, Occupancy = 95, StatusColor = Color.Warning },
+            new Building { Name = "Office", Icon = "🏢", Type = BuildingType.Commercial, Occupancy = 60, StatusColor = Color.Secondary }
+        };
+    }
+
+    public void Dispose()
+    {
+        _timer?.Dispose();
+        CityTime.OnTimeChanged -= OnTimeChanged;
+        Simulation.OnActivityLogged -= OnActivityLogged;
+        Simulation.OnCitizenStateChanged -= OnCitizenStateChanged;
+        Simulation.OnCityStateChanged -= OnCityStateChanged;
+        Simulation.OnMayorDecision -= OnMayorDecision;
+    }
+
+    private class LogEntry
+    {
+        public string Timestamp { get; set; } = "";
+        public string Message { get; set; } = "";
         public string Emoji { get; set; } = "";
-        public string Occupation { get; set; } = "";
-    }
-
-    private class Building
-    {
-        public string Name { get; set; } = "";
-        public string Icon { get; set; } = "";
-        public int Occupancy { get; set; }
-        public Color StatusColor { get; set; }
+        public string Category { get; set; } = "";
     }
 }

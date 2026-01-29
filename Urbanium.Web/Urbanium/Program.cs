@@ -1,7 +1,22 @@
 using Urbanium.Components;
 using MudBlazor.Services;
+using Urbanium.Configuration;
+using Urbanium.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure LM Studio settings
+builder.Services.Configure<LMStudioSettings>(
+    builder.Configuration.GetSection("LMStudio"));
+
+// Register AI services
+builder.Services.AddSingleton<MayorAgentService>();
+builder.Services.AddSingleton<CitizenDecisionService>();
+builder.Services.AddSingleton<CitizenAIEngine>();
+
+// Register city services
+builder.Services.AddSingleton<CityTimeService>();
+builder.Services.AddSingleton<CitySimulationService>();
 
 builder.Services.AddMudServices();
 
