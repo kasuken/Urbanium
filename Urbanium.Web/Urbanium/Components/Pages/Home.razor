@@ -1,6 +1,8 @@
 ﻿@page "/"
 @using Urbanium.Services
 @using Urbanium.Models
+@using Urbanium.Configuration
+@using Microsoft.Extensions.Options
 @implements IDisposable
 @rendermode InteractiveServer
 
@@ -190,23 +192,35 @@
     </MudPaper>
 
     <MudPaper Elevation="3" Class="pa-4 mb-4">
-        <MudText Typo="Typo.h5" Class="mb-3" Align="Align.Center">Buildings</MudText>
+        <MudText Typo="Typo.h5" Class="mb-3" Align="Align.Center">Residential Buildings</MudText>
         <MudGrid Spacing="3">
-            @foreach (var b in buildings)
+            @foreach (var b in buildings.Where(b => b.Type == BuildingType.Residential))
             {
                 <MudItem xs="12" sm="6" md="3">
                     <MudCard Elevation="2" Class="pa-2">
                         <MudCardContent Class="text-center">
                             <MudText Typo="Typo.h3" Class="mb-2">@b.Icon</MudText>
                             <MudText Typo="Typo.h6">@b.Name</MudText>
-                            @if (b.Type == BuildingType.Residential)
-                            {
-                                <MudText Typo="Typo.caption">@b.CurrentResidents / @b.Capacity residents</MudText>
-                            }
-                            else
-                            {
-                                <MudText Typo="Typo.caption">@b.Occupancy% Occupancy</MudText>
-                            }
+                            <MudText Typo="Typo.caption">@b.CurrentResidents / @b.Capacity residents</MudText>
+                            <MudProgressLinear Color="@b.StatusColor" Value="@GetBuildingProgress(b)" Class="mt-3" />
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+
+    <MudPaper Elevation="3" Class="pa-4 mb-4">
+        <MudText Typo="Typo.h5" Class="mb-3" Align="Align.Center">Commercial Buildings</MudText>
+        <MudGrid Spacing="3">
+            @foreach (var b in buildings.Where(b => b.Type == BuildingType.Commercial))
+            {
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="2" Class="pa-2">
+                        <MudCardContent Class="text-center">
+                            <MudText Typo="Typo.h3" Class="mb-2">@b.Icon</MudText>
+                            <MudText Typo="Typo.h6">@b.Name</MudText>
+                            <MudText Typo="Typo.caption">@b.Occupancy% Occupancy</MudText>
                             <MudProgressLinear Color="@b.StatusColor" Value="@GetBuildingProgress(b)" Class="mt-3" />
                         </MudCardContent>
                     </MudCard>
@@ -220,6 +234,7 @@
 @code {
     [Inject] private CityTimeService CityTime { get; set; } = default!;
     [Inject] private CitySimulationService Simulation { get; set; } = default!;
+    [Inject] private IOptions<SimulationSettings> Settings { get; set; } = default!;
     
     private bool isTimeRunning = false;
     private bool isTimePaused = false;
@@ -258,7 +273,7 @@
             Category = e.Category
         });
         
-        if (activityLog.Count > 100)
+        if (activityLog.Count > Settings.Value.MaxActivityLogEntries)
             activityLog.RemoveAt(0);
         
         InvokeAsync(StateHasChanged);
@@ -297,7 +312,7 @@
             _timer = new System.Threading.Timer(_ =>
             {
                 CityTime.AdvanceHour();
-            }, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
+            }, null, TimeSpan.Zero, TimeSpan.FromSeconds(Settings.Value.SecondsPerHour));
         }
     }
 

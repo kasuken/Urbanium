@@ -9,6 +9,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<LMStudioSettings>(
     builder.Configuration.GetSection("LMStudio"));
 
+// Configure Simulation settings
+builder.Services.Configure<SimulationSettings>(
+    builder.Configuration.GetSection("Simulation"));
+
 // Register AI services
 builder.Services.AddSingleton<MayorAgentService>();
 builder.Services.AddSingleton<CitizenDecisionService>();

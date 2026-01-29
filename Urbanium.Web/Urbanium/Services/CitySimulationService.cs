@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Options;
+using Urbanium.Configuration;
 using Urbanium.Models;
 
 namespace Urbanium.Services;
@@ -32,6 +34,7 @@ public class CitySimulationService
     private readonly MayorAgentService _mayorService;
     private readonly CityTimeService _timeService;
     private readonly ILogger<CitySimulationService> _logger;
+    private readonly SimulationSettings _settings;
     private readonly Random _random = new();
 
     // City data
@@ -56,11 +59,13 @@ public class CitySimulationService
         CitizenAIEngine aiEngine,
         MayorAgentService mayorService,
         CityTimeService timeService,
+        IOptions<SimulationSettings> settings,
         ILogger<CitySimulationService> logger)
     {
         _aiEngine = aiEngine;
         _mayorService = mayorService;
         _timeService = timeService;
+        _settings = settings.Value;
         _logger = logger;
 
         // Subscribe to time changes
@@ -82,8 +87,8 @@ public class CitySimulationService
             Name = "Mayor Alexandra Sterling",
             Emoji = "🤖",
             Quote = "Managing Urbanium with efficiency and care.",
-            ApprovalRating = 75,
-            DaysUntilNextDecision = 30,
+            ApprovalRating = _settings.InitialMayorApproval,
+            DaysUntilNextDecision = _settings.MayorDecisionIntervalDays,
             PrimaryFocus = "Economic Growth",
             SecondaryFocus = "Citizen Welfare"
         };
@@ -336,9 +341,9 @@ public class CitySimulationService
         {
             var activeCitizen = _citizens[_random.Next(_citizens.Count)];
             
-            // 40% chance that the selected citizen actually makes a decision
+            // Configurable chance that the selected citizen actually makes a decision
             // (sometimes people just continue what they're doing)
-            if (_random.Next(100) < 40)
+            if (_random.Next(100) < _settings.CitizenDecisionChance)
             {
                 try
                 {
@@ -403,7 +408,7 @@ public class CitySimulationService
         if (_mayor.DaysUntilNextDecision <= 0)
         {
             await ProcessMayorDecisionAsync(currentDay);
-            _mayor.DaysUntilNextDecision = 30;  // Reset countdown
+            _mayor.DaysUntilNextDecision = _settings.MayorDecisionIntervalDays;  // Reset countdown
         }
     }
 
@@ -796,8 +801,8 @@ public class CitySimulationService
             Name = "Mayor Alexandra Sterling",
             Emoji = "🤖",
             Quote = "Managing Urbanium with efficiency and care.",
-            ApprovalRating = 75,
-            DaysUntilNextDecision = 30,
+            ApprovalRating = _settings.InitialMayorApproval,
+            DaysUntilNextDecision = _settings.MayorDecisionIntervalDays,
             PrimaryFocus = "Economic Growth",
             SecondaryFocus = "Citizen Welfare"
         };
